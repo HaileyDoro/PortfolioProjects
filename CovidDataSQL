@@ -1,0 +1,80 @@
+SELECT *
+  FROM `resumeproject1.covid_data.covid_deaths`
+  ORDER BY 3,4
+
+--Looking at Total Cases vs Total Deaths
+
+SELECT location, date, total_cases, total_deaths, (total_deaths/total_cases)*100 as DeathPercentage
+  FROM  `resumeproject1.covid_data.covid_deaths` 
+  ORDER BY 1,2
+
+--Total cases
+
+SELECT location, date, total_cases, population, (total_cases/population)*100 as PercentPopulationInfected
+  FROM  `resumeproject1.covid_data.covid_deaths` 
+  ORDER BY 1,2
+
+--Shows what percentage of population got Covid
+
+SELECT location, population, MAX(total_cases) as HighestInfectionCount, Max((total_cases/population))*100 as PercentPopulationInfected
+  FROM  `resumeproject1.covid_data.covid_deaths` 
+  Group by location, population
+  ORDER BY PercentPopulationInfected desc
+
+--Countries with highest death count per population
+
+SELECT location, MAX(total_deaths) as TotalDeathCount
+  FROM  `resumeproject1.covid_data.covid_deaths` 
+  WHERE continent is not null
+  Group by location
+  ORDER BY TotalDeathCount desc
+
+--Deaths by country
+
+SELECT location, MAX(total_deaths) as TotalDeathCount
+  FROM  `resumeproject1.covid_data.covid_deaths` 
+  WHERE continent is not null
+  Group by location
+  ORDER BY TotalDeathCount desc
+
+--Highest deaths by continent
+
+SELECT continent, MAX(total_deaths) as TotalDeathCount
+  FROM  `resumeproject1.covid_data.covid_deaths` 
+  WHERE continent is not null
+  Group by continent
+  ORDER BY TotalDeathCount desc
+
+--Global numbers by date
+
+SELECT date, SUM(new_cases) as total_cases,SUM(new_deaths) as total_deaths, SUM(cast(new_deaths as int))/SUM(new_cases)*100 as DeathPercentage
+  FROM `resumeproject1.covid_data.covid_deaths` 
+  WHERE continent is not null
+  GROUP BY date
+  ORDER BY 1,2
+
+--Global death percentage
+
+SELECT SUM(new_cases) as total_cases,SUM(new_deaths) as total_deaths, SUM(cast(new_deaths as int))/SUM(new_cases)*100 as DeathPercentage
+  FROM `resumeproject1.covid_data.covid_deaths` 
+  WHERE continent is not null
+--GROUP BY date
+  ORDER BY 1,2
+
+--Population vs Vaccinations
+
+WITH
+PopvsVac AS
+(
+  SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+  SUM(vac.new_vaccinations) OVER (PARTITION BY dea.location ORDER BY dea.location, dea.date) AS
+RollingVaccination,
+
+  FROM `resumeproject1.covid_data.covid_deaths` AS dea
+  JOIN`resumeproject1.covid_data.covid_vaccinations` AS vac
+  ON dea.location = vac.location
+  AND dea.date = vac.date
+  WHERE dea.continent IS NOT NULL)
+
+SELECT *, (RollingVaccination/population)*100
+  FROM PopvsVac
